@@ -28,6 +28,7 @@ mod stream_check;
 mod subscription;
 mod sync_support;
 
+mod lepro;
 mod lightweight;
 mod s3_sync;
 mod usage;
@@ -61,6 +62,7 @@ pub use skill::*;
 pub use stream_check::*;
 pub use subscription::*;
 
+pub use lepro::*;
 pub use lightweight::*;
 pub use s3_sync::*;
 pub use usage::*;

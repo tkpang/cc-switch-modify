@@ -1456,6 +1456,11 @@ pub fn run() {
             commands::enter_lightweight_mode,
             commands::exit_lightweight_mode,
             commands::is_lightweight_mode,
+            // Lepro: 飞书登录 + 自动同步 key/模型到本地 Claude Code
+            commands::lepro_login,
+            commands::lepro_logout,
+            commands::lepro_auth_status,
+            commands::lepro_force_sync,
         ]);
 
     let app = builder

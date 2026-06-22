@@ -40,6 +40,9 @@ dirs = "5.0"
 toml = "0.8"
 toml_edit = "0.22"
 reqwest = { version = "0.12", features = ["rustls-tls", "json", "stream", "socks"] }
+# Lepro: 可移植核心(飞书OIDC/同步) + token 安全存储
+lepro-core = { path = "../lepro-core" }
+keyring = "2"
 arboard = "3.6"
 flate2 = "1"
 brotli = "7"

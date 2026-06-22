@@ -5,6 +5,7 @@
 pub mod claude_settings;
 pub mod credentials;
 pub mod error;
+pub mod loopback;
 pub mod oidc;
 pub mod pkce;
 

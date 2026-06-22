@@ -11,7 +11,11 @@ fn main() {
     // 1. Embeds the manifest into test binaries via /MANIFEST:EMBED
     // 2. Uses /MANIFEST:NO for the main binary to avoid duplicate resources
     //    (Tauri already handles manifest embedding for the app binary)
-    #[cfg(target_os = "windows")]
+    //
+    // `/MANIFEST:*` are MSVC link.exe flags; GNU `ld` rejects them. The Lepro
+    // fork builds under `x86_64-pc-windows-gnu`, so gate these to the msvc env.
+    // See docs/BUILD-windows-gnu.md.
+    #[cfg(all(target_os = "windows", target_env = "msvc"))]
     {
         let manifest_path = std::path::PathBuf::from(
             std::env::var("CARGO_MANIFEST_DIR").expect("missing CARGO_MANIFEST_DIR"),

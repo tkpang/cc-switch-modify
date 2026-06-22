@@ -1,4 +1,6 @@
 [toolchain]
-channel = "1.95"
+# Lepro fork builds under the GNU toolchain on Windows (MSVC unavailable on the
+# build host). Setup + prerequisites: docs/BUILD-windows-gnu.md
+channel = "stable-x86_64-pc-windows-gnu"
 components = ["rustfmt", "clippy"]
 profile = "minimal"

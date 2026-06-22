@@ -1,0 +1,5 @@
+# 本机 ~/code 下全局 LIBRARY_PATH 指向 mipsel-musl 交叉库,会污染 host x86_64 链接
+# (rust-lld: Scrt1.o incompatible with elf_x86_64)。用 cargo [env].force 清空,
+# 保证 lepro-core 在本机以 host 工具链正常 build/test。
+[env]
+LIBRARY_PATH = { value = "", force = true }

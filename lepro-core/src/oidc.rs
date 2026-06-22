@@ -5,7 +5,7 @@ use crate::error::LeproError;
 use url::Url;
 
 /// A parsed OAuth2 loopback callback containing code and state.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Callback {
     pub code: String,
     pub state: String,
@@ -17,6 +17,9 @@ pub struct TokenSet {
     pub access_token: String,
     #[serde(default)]
     pub refresh_token: Option<String>,
+    /// Lifetime of the access token in seconds as reported by the server.
+    /// A value of `0` means the field was absent in the response — callers must
+    /// treat `0` as "unknown", NOT "already expired" (to avoid a refresh-storm).
     #[serde(default)]
     pub expires_in: i64,
     #[serde(default)]
@@ -46,29 +49,6 @@ pub fn build_authorize_url(issuer: &str, redirect_uri: &str, challenge: &str, st
         .append_pair("code_challenge_method", "S256");
 
     url.to_string()
-}
-
-/// Parse a loopback callback URL and extract the authorization code and state.
-///
-/// Returns `Err(LeproError::Oidc)` if the `code` parameter is missing.
-pub fn parse_callback(url: &str) -> Result<Callback, LeproError> {
-    let parsed = Url::parse(url).map_err(|e| LeproError::Parse(e.to_string()))?;
-
-    let mut code: Option<String> = None;
-    let mut state: Option<String> = None;
-
-    for (key, value) in parsed.query_pairs() {
-        match key.as_ref() {
-            "code" => code = Some(value.into_owned()),
-            "state" => state = Some(value.into_owned()),
-            _ => {}
-        }
-    }
-
-    let code = code.ok_or_else(|| LeproError::Oidc("missing 'code' parameter in callback".to_string()))?;
-    let state = state.unwrap_or_default();
-
-    Ok(Callback { code, state })
 }
 
 /// Exchange an authorization code for a token set.
@@ -153,18 +133,6 @@ mod tests {
         assert!(u.contains("code_challenge_method=S256"));
         assert!(u.contains("scope=openid+offline_access") || u.contains("scope=openid%20offline_access"));
         assert!(u.contains("redirect_uri=http%3A%2F%2F127.0.0.1%3A5%2Fcb"));
-    }
-
-    #[test]
-    fn parse_callback_extracts_code_state() {
-        let c = parse_callback("http://127.0.0.1:5/cb?code=abc&state=st").unwrap();
-        assert_eq!(c.code, "abc");
-        assert_eq!(c.state, "st");
-    }
-
-    #[test]
-    fn parse_callback_errors_without_code() {
-        assert!(parse_callback("http://127.0.0.1:5/cb?state=st").is_err());
     }
 
     #[tokio::test]

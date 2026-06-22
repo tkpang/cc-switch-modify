@@ -11,8 +11,9 @@ const UNRESERVED: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 
 /// Generate a PKCE code verifier.
 ///
-/// Returns a random string of 43–128 characters containing only unreserved characters:
+/// Returns a fixed 64-character random string containing only unreserved characters:
 /// A-Z a-z 0-9 - . _ ~
+/// (64 chars is within the RFC 7636 §4.1 allowed range of 43–128.)
 pub fn generate_verifier() -> String {
     let mut rng = rand::thread_rng();
     (0..64)

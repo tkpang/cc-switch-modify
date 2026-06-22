@@ -3,6 +3,10 @@
 use crate::error::LeproError;
 
 /// Gateway credentials returned from the distribution API.
+///
+/// Note: `models` and `group` are provided for the integrator/UI to display
+/// and are NOT used by the sync/config-write path — only `base_url` and `token`
+/// are consumed when writing the local configuration.
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub struct Credentials {
     pub base_url: String,
@@ -39,7 +43,7 @@ pub async fn fetch(
         .map_err(|e| LeproError::Http(e.to_string()))?;
 
     if !resp.status().is_success() {
-        return Err(LeproError::Oidc("unauthorized".to_string()));
+        return Err(LeproError::Oidc(format!("credentials endpoint returned {}", resp.status())));
     }
 
     resp.json::<Credentials>()

@@ -8,5 +8,6 @@ pub mod error;
 pub mod loopback;
 pub mod oidc;
 pub mod pkce;
+pub mod sync;
 
 pub use error::LeproError;

@@ -191,4 +191,22 @@ mod tests {
         assert_eq!(ts.access_token, "at");
         assert_eq!(ts.refresh_token.as_deref(), Some("rt"));
     }
+
+    #[tokio::test]
+    async fn refresh_parses_tokenset() {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/sso/token"))
+            .and(wiremock::matchers::body_string_contains("grant_type=refresh_token"))
+            .respond_with(wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "access_token":"at2","refresh_token":"rt2","token_type":"Bearer",
+                "expires_in":3600,"scope":"openid offline_access"
+            })))
+            .mount(&server)
+            .await;
+        let http = reqwest::Client::new();
+        let ts = refresh(&http, &format!("{}/sso", server.uri()), "old-rt").await.unwrap();
+        assert_eq!(ts.access_token, "at2");
+        assert_eq!(ts.refresh_token.as_deref(), Some("rt2"));
+    }
 }

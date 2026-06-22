@@ -1,0 +1,24 @@
+[package]
+name = "lepro-core"
+version = "0.1.0"
+edition = "2021"
+description = "lepro-connect 可移植核心:飞书 OIDC/PKCE、分发 API 客户端、Claude settings 构建、同步逻辑(不依赖 tauri)"
+license = "MIT"
+
+# 独立 workspace root —— 与 cc-switch 的 src-tauri 隔离,避免 tauri/webkit 进入解析
+[workspace]
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "net"] }
+axum = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+thiserror = "1"
+url = "2"
+
+[dev-dependencies]
+wiremock = "0.6"

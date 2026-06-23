@@ -43,7 +43,7 @@ fn upsert_lepro_provider(
         None,
     );
     // 新建；若已存在则改为更新（兼容 save 非 upsert 的实现）。
-    if ProviderService::add(state, app, provider.clone(), false).is_err() {
+    if ProviderService::add(state, app.clone(), provider.clone(), false).is_err() {
         ProviderService::update(state, app, Some(LEPRO_PROVIDER_ID), provider)
             .map_err(|e| LeproError::Io(e.to_string()))?;
     }

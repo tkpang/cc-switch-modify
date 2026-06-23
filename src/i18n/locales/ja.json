@@ -2868,5 +2868,22 @@
     "expiredHint": "{{tool}}コマンドを実行してログインを更新してください",
     "queryFailed": "クエリに失敗しました",
     "refresh": "更新"
+  },
+  "lepro": {
+    "login": "Feishu でログイン",
+    "loginTooltip": "Feishu でログインし、Lepro API キーを Claude Code に自動同期します",
+    "loginSuccess": "Feishu でログインしました",
+    "loginFailed": "ログインに失敗しました：{{detail}}",
+    "logout": "ログアウト",
+    "logoutSuccess": "ログアウトしました",
+    "logoutFailed": "ログアウトに失敗しました：{{detail}}",
+    "statusTitle": "Lepro ログイン済み",
+    "group": "グループ",
+    "lastSync": "前回の同期 {{time}}",
+    "neverSynced": "未同期",
+    "models": "利用可能なモデル（{{num}}）",
+    "syncNow": "今すぐ同期",
+    "syncSuccess": "同期しました — {{num}} 個のモデルが利用可能",
+    "syncFailed": "同期に失敗しました：{{detail}}"
   }
 }

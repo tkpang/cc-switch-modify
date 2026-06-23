@@ -2840,5 +2840,22 @@
     "expiredHint": "請執行 {{tool}} 命令重新整理登入",
     "queryFailed": "查詢失敗",
     "refresh": "重新整理"
+  },
+  "lepro": {
+    "login": "飛書登入",
+    "loginTooltip": "用飛書登入並自動同步 Lepro API key 到 Claude Code",
+    "loginSuccess": "飛書登入成功",
+    "loginFailed": "登入失敗：{{detail}}",
+    "logout": "登出",
+    "logoutSuccess": "已登出",
+    "logoutFailed": "登出失敗：{{detail}}",
+    "statusTitle": "Lepro 已登入",
+    "group": "分組",
+    "lastSync": "上次同步 {{time}}",
+    "neverSynced": "尚未同步",
+    "models": "可用模型（{{num}}）",
+    "syncNow": "立即同步",
+    "syncSuccess": "同步成功，已可用 {{num}} 個模型",
+    "syncFailed": "同步失敗：{{detail}}"
   }
 }

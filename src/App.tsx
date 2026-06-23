@@ -64,6 +64,8 @@ import { EditProviderDialog } from "@/components/providers/EditProviderDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import { UpdateBadge } from "@/components/UpdateBadge";
+import { LeproLoginButton } from "@/components/lepro/LeproLoginButton";
+import { LeproSyncStatus } from "@/components/lepro/LeproSyncStatus";
 import { EnvWarningBanner } from "@/components/env/EnvWarningBanner";
 import { ProxyToggle } from "@/components/proxy/ProxyToggle";
 import { ClaudeDesktopRouteToggle } from "@/components/proxy/ClaudeDesktopRouteToggle";
@@ -1191,6 +1193,8 @@ function App() {
                     setCurrentView("settings");
                   }}
                 />
+                <LeproLoginButton />
+                <LeproSyncStatus />
                 {isCurrentAppTakeoverActive && (
                   <Button
                     variant="ghost"

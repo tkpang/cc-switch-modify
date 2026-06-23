@@ -2868,5 +2868,22 @@
     "expiredHint": "请运行 {{tool}} 命令刷新登录",
     "queryFailed": "查询失败",
     "refresh": "刷新"
+  },
+  "lepro": {
+    "login": "飞书登录",
+    "loginTooltip": "用飞书登录并自动同步 Lepro API key 到 Claude Code",
+    "loginSuccess": "飞书登录成功",
+    "loginFailed": "登录失败：{{detail}}",
+    "logout": "退出登录",
+    "logoutSuccess": "已退出登录",
+    "logoutFailed": "退出失败：{{detail}}",
+    "statusTitle": "Lepro 已登录",
+    "group": "分组",
+    "lastSync": "上次同步 {{time}}",
+    "neverSynced": "尚未同步",
+    "models": "可用模型（{{num}}）",
+    "syncNow": "立即同步",
+    "syncSuccess": "同步成功，已可用 {{num}} 个模型",
+    "syncFailed": "同步失败：{{detail}}"
   }
 }

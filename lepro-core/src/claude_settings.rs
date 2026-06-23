@@ -5,6 +5,20 @@
 
 use serde_json::Value;
 
+/// 归一化 Anthropic/Claude Code 的 base URL。
+///
+/// 分发 API 返回的 base 是 OpenAI 风格、带尾部 `/v1`（如
+/// `http://host:18050/v1`），适用于 Codex 等 OpenAI 客户端。但 Claude Code
+/// 用的 Anthropic SDK 会自行在 base 后拼 `/v1/messages`，若 base 也带 `/v1`
+/// 就变成 `/v1/v1/messages` → 404。故为 `ANTHROPIC_BASE_URL` 去掉尾部 `/v1`。
+fn normalize_anthropic_base_url(base_url: &str) -> String {
+    let trimmed = base_url.trim_end_matches('/');
+    match trimmed.strip_suffix("/v1") {
+        Some(stripped) => stripped.to_string(),
+        None => trimmed.to_string(),
+    }
+}
+
 /// Build a settings.json Value by merging base_url and token into existing config.
 ///
 /// Ensures that:
@@ -48,7 +62,7 @@ pub fn build(existing: Option<Value>, base_url: &str, token: &str) -> Value {
     if let Some(env_obj) = env.as_object_mut() {
         env_obj.insert(
             "ANTHROPIC_BASE_URL".to_string(),
-            Value::String(base_url.to_string()),
+            Value::String(normalize_anthropic_base_url(base_url)),
         );
         env_obj.insert(
             "ANTHROPIC_AUTH_TOKEN".to_string(),
@@ -78,5 +92,30 @@ mod tests {
     fn build_from_none_creates_env() {
         let out = build(None, "http://h", "sk-2");
         assert_eq!(out["env"]["ANTHROPIC_AUTH_TOKEN"], "sk-2");
+    }
+
+    #[test]
+    fn strips_trailing_v1_from_base_url() {
+        // Anthropic SDK 会自拼 /v1/messages,base 不能带 /v1
+        let out = build(None, "http://192.168.33.13:18050/v1", "sk-3");
+        assert_eq!(out["env"]["ANTHROPIC_BASE_URL"], "http://192.168.33.13:18050");
+    }
+
+    #[test]
+    fn strips_trailing_v1_with_slash() {
+        let out = build(None, "http://h:18050/v1/", "sk-4");
+        assert_eq!(out["env"]["ANTHROPIC_BASE_URL"], "http://h:18050");
+    }
+
+    #[test]
+    fn keeps_base_url_without_v1() {
+        let out = build(None, "http://h:18050", "sk-5");
+        assert_eq!(out["env"]["ANTHROPIC_BASE_URL"], "http://h:18050");
+    }
+
+    #[test]
+    fn does_not_strip_non_v1_suffix() {
+        let out = build(None, "http://h:18050/v1beta", "sk-6");
+        assert_eq!(out["env"]["ANTHROPIC_BASE_URL"], "http://h:18050/v1beta");
     }
 }

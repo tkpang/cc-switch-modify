@@ -179,17 +179,19 @@ export function useLeproMaster() {
     },
   });
 
-  // 开机/打开 app 时静默刷新:仅对当前已在用 Lepro 的 app 重切以应用最新配置。
+  // 开机/打开 app 时静默刷新:当总开关为「开」(由调用方判断,通常是 Claude 在用 Lepro)
+  // 时,把 4 个 app 全部对齐到 Lepro 并写入最新配置 —— 既保证「全局开=全部开」一致,
+  // 也修复从「仅 Claude」旧版升级后其它 app 未切换的迁移问题。切前记下原供应商供回退。
   const refresh = useMutation({
     mutationFn: async () => {
       const outcome = await leproApi.forceSync();
       for (const app of LEPRO_APPS) {
         try {
-          if ((await providersApi.getCurrent(app)) === LEPRO_ID) {
-            await providersApi.switch(LEPRO_ID, app);
-          }
+          const cur = await providersApi.getCurrent(app);
+          if (cur && cur !== LEPRO_ID) localStorage.setItem(prevKey(app), cur);
+          await providersApi.switch(LEPRO_ID, app);
         } catch {
-          /* ignore */
+          /* best-effort：单个 app 失败不阻塞其它 */
         }
       }
       return outcome;

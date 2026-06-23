@@ -1,6 +1,7 @@
 [toolchain]
-# Lepro fork builds under the GNU toolchain on Windows (MSVC unavailable on the
-# build host). Setup + prerequisites: docs/BUILD-windows-gnu.md
-channel = "stable-x86_64-pc-windows-gnu"
+# CI (GitHub Actions) builds on the runner's default host = MSVC, which static-
+# links the WebView2 loader (no WebView2Loader.dll bundling needed). "channel"
+# must be a plain release name; newer rustup rejects the "stable-<triple>" form.
+channel = "stable"
 components = ["rustfmt", "clippy"]
 profile = "minimal"

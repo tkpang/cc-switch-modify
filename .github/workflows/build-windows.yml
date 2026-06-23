@@ -11,12 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # rust-toolchain.toml pins the GNU toolchain; provide a complete mingw
-      # (gcc/as/ld/libgcc) via the runner's preinstalled MSYS2.
-      - name: Add MSYS2 mingw64 to PATH
-        shell: pwsh
-        run: Add-Content -Path $env:GITHUB_PATH -Value "C:\msys64\mingw64\bin"
-
       - uses: pnpm/action-setup@v4
         with:
           version: 9

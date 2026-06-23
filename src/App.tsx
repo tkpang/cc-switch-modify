@@ -211,6 +211,13 @@ function App() {
     }
   }, [visibleApps, activeApp]);
 
+  // 强制 OS 窗口标题为品牌名（tauri.conf/document.title 在本工程不稳定生效）。
+  useEffect(() => {
+    getCurrentWindow()
+      .setTitle("Lepro Connect")
+      .catch(() => {});
+  }, []);
+
   // Fallback from sessions view when switching to an app without session support
   useEffect(() => {
     if (

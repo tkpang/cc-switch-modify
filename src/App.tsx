@@ -66,6 +66,7 @@ import { SettingsPage } from "@/components/settings/SettingsPage";
 import { UpdateBadge } from "@/components/UpdateBadge";
 import { LeproLoginButton } from "@/components/lepro/LeproLoginButton";
 import { LeproSyncStatus } from "@/components/lepro/LeproSyncStatus";
+import { LeproSwitch } from "@/components/lepro/LeproSwitch";
 import { EnvWarningBanner } from "@/components/env/EnvWarningBanner";
 import { ProxyToggle } from "@/components/proxy/ProxyToggle";
 import { ClaudeDesktopRouteToggle } from "@/components/proxy/ClaudeDesktopRouteToggle";
@@ -275,6 +276,8 @@ function App() {
   });
   const providers = useMemo(() => data?.providers ?? {}, [data]);
   const currentProviderId = data?.currentProviderId ?? "";
+  // Lepro 主屏:开关关闭时点「设置」才展开完整供应商管理(Claude 应用)。
+  const [leproSettingsOpen, setLeproSettingsOpen] = useState(false);
   const isOpenClawView =
     activeApp === "openclaw" &&
     (currentView === "providers" ||
@@ -954,54 +957,69 @@ function App() {
                     transition={{ duration: 0.15 }}
                     className="space-y-4"
                   >
-                    <ProviderList
-                      providers={providers}
-                      currentProviderId={currentProviderId}
-                      appId={activeApp}
-                      isLoading={isLoading}
-                      isProxyRunning={isProxyRunning}
-                      isProxyTakeover={
-                        isProxyRunning && isCurrentAppTakeoverActive
-                      }
-                      activeProviderId={activeProviderId}
-                      onSwitch={switchProvider}
-                      onEdit={(provider) => {
-                        setEditingProvider(provider);
-                      }}
-                      onDelete={(provider) =>
-                        setConfirmAction({ provider, action: "delete" })
-                      }
-                      onRemoveFromConfig={
-                        activeApp === "opencode" ||
-                        activeApp === "openclaw" ||
-                        activeApp === "hermes"
-                          ? (provider) =>
-                              setConfirmAction({ provider, action: "remove" })
-                          : undefined
-                      }
-                      onDisableOmo={
-                        activeApp === "opencode" ? handleDisableOmo : undefined
-                      }
-                      onDisableOmoSlim={
-                        activeApp === "opencode"
-                          ? handleDisableOmoSlim
-                          : undefined
-                      }
-                      onDuplicate={handleDuplicateProvider}
-                      onConfigureUsage={setUsageProvider}
-                      onOpenWebsite={handleOpenWebsite}
-                      onOpenTerminal={
-                        activeApp === "claude" ? handleOpenTerminal : undefined
-                      }
-                      onCreate={() => setIsAddOpen(true)}
-                      onSetAsDefault={
-                        activeApp === "openclaw"
-                          ? setAsDefaultModel
-                          : activeApp === "hermes"
-                            ? switchProvider
+                    {activeApp === "claude" && (
+                      <LeproSwitch
+                        providers={providers}
+                        currentProviderId={currentProviderId}
+                        onSwitch={switchProvider}
+                        settingsOpen={leproSettingsOpen}
+                        onToggleSettings={() => setLeproSettingsOpen((s) => !s)}
+                      />
+                    )}
+                    {(activeApp !== "claude" || leproSettingsOpen) && (
+                      <ProviderList
+                        providers={providers}
+                        currentProviderId={currentProviderId}
+                        appId={activeApp}
+                        isLoading={isLoading}
+                        isProxyRunning={isProxyRunning}
+                        isProxyTakeover={
+                          isProxyRunning && isCurrentAppTakeoverActive
+                        }
+                        activeProviderId={activeProviderId}
+                        onSwitch={switchProvider}
+                        onEdit={(provider) => {
+                          setEditingProvider(provider);
+                        }}
+                        onDelete={(provider) =>
+                          setConfirmAction({ provider, action: "delete" })
+                        }
+                        onRemoveFromConfig={
+                          activeApp === "opencode" ||
+                          activeApp === "openclaw" ||
+                          activeApp === "hermes"
+                            ? (provider) =>
+                                setConfirmAction({ provider, action: "remove" })
                             : undefined
-                      }
-                    />
+                        }
+                        onDisableOmo={
+                          activeApp === "opencode"
+                            ? handleDisableOmo
+                            : undefined
+                        }
+                        onDisableOmoSlim={
+                          activeApp === "opencode"
+                            ? handleDisableOmoSlim
+                            : undefined
+                        }
+                        onDuplicate={handleDuplicateProvider}
+                        onConfigureUsage={setUsageProvider}
+                        onOpenWebsite={handleOpenWebsite}
+                        onOpenTerminal={
+                          activeApp === "claude"
+                            ? handleOpenTerminal
+                            : undefined
+                        }
+                        onCreate={() => setIsAddOpen(true)}
+                        onSetAsDefault={
+                          activeApp === "openclaw"
+                            ? setAsDefaultModel
+                            : activeApp === "hermes"
+                              ? switchProvider
+                              : undefined
+                        }
+                      />
+                    )}
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -1176,7 +1194,7 @@ function App() {
                         : "text-blue-500 dark:text-blue-400",
                     )}
                   >
-                    Lepro Connect
+                    Lepro
                   </span>
                 </div>
                 <Button

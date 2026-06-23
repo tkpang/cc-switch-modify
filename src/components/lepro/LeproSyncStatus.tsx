@@ -47,7 +47,7 @@ export function LeproSyncStatus() {
           ) : (
             <CheckCircle2 className="h-4 w-4" />
           )}
-          Lepro
+          {t("lepro.connected", { defaultValue: "Connected" })}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">

@@ -64,6 +64,9 @@ import { EditProviderDialog } from "@/components/providers/EditProviderDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import { UpdateBadge } from "@/components/UpdateBadge";
+import { LeproLoginButton } from "@/components/lepro/LeproLoginButton";
+import { LeproSyncStatus } from "@/components/lepro/LeproSyncStatus";
+import { LeproSwitch } from "@/components/lepro/LeproSwitch";
 import { EnvWarningBanner } from "@/components/env/EnvWarningBanner";
 import { ProxyToggle } from "@/components/proxy/ProxyToggle";
 import { ClaudeDesktopRouteToggle } from "@/components/proxy/ClaudeDesktopRouteToggle";
@@ -209,6 +212,13 @@ function App() {
     }
   }, [visibleApps, activeApp]);
 
+  // 强制 OS 窗口标题为品牌名（tauri.conf/document.title 在本工程不稳定生效）。
+  useEffect(() => {
+    getCurrentWindow()
+      .setTitle("Lepro Connect")
+      .catch(() => {});
+  }, []);
+
   // Fallback from sessions view when switching to an app without session support
   useEffect(() => {
     if (
@@ -266,6 +276,8 @@ function App() {
   });
   const providers = useMemo(() => data?.providers ?? {}, [data]);
   const currentProviderId = data?.currentProviderId ?? "";
+  // Lepro 主屏:开关关闭时点「设置」才展开完整供应商管理(Claude 应用)。
+  const [leproSettingsOpen, setLeproSettingsOpen] = useState(false);
   const isOpenClawView =
     activeApp === "openclaw" &&
     (currentView === "providers" ||
@@ -945,54 +957,69 @@ function App() {
                     transition={{ duration: 0.15 }}
                     className="space-y-4"
                   >
-                    <ProviderList
-                      providers={providers}
-                      currentProviderId={currentProviderId}
-                      appId={activeApp}
-                      isLoading={isLoading}
-                      isProxyRunning={isProxyRunning}
-                      isProxyTakeover={
-                        isProxyRunning && isCurrentAppTakeoverActive
-                      }
-                      activeProviderId={activeProviderId}
-                      onSwitch={switchProvider}
-                      onEdit={(provider) => {
-                        setEditingProvider(provider);
-                      }}
-                      onDelete={(provider) =>
-                        setConfirmAction({ provider, action: "delete" })
-                      }
-                      onRemoveFromConfig={
-                        activeApp === "opencode" ||
-                        activeApp === "openclaw" ||
-                        activeApp === "hermes"
-                          ? (provider) =>
-                              setConfirmAction({ provider, action: "remove" })
-                          : undefined
-                      }
-                      onDisableOmo={
-                        activeApp === "opencode" ? handleDisableOmo : undefined
-                      }
-                      onDisableOmoSlim={
-                        activeApp === "opencode"
-                          ? handleDisableOmoSlim
-                          : undefined
-                      }
-                      onDuplicate={handleDuplicateProvider}
-                      onConfigureUsage={setUsageProvider}
-                      onOpenWebsite={handleOpenWebsite}
-                      onOpenTerminal={
-                        activeApp === "claude" ? handleOpenTerminal : undefined
-                      }
-                      onCreate={() => setIsAddOpen(true)}
-                      onSetAsDefault={
-                        activeApp === "openclaw"
-                          ? setAsDefaultModel
-                          : activeApp === "hermes"
-                            ? switchProvider
+                    {activeApp === "claude" && (
+                      <LeproSwitch
+                        providers={providers}
+                        currentProviderId={currentProviderId}
+                        onSwitch={switchProvider}
+                        settingsOpen={leproSettingsOpen}
+                        onToggleSettings={() => setLeproSettingsOpen((s) => !s)}
+                      />
+                    )}
+                    {(activeApp !== "claude" || leproSettingsOpen) && (
+                      <ProviderList
+                        providers={providers}
+                        currentProviderId={currentProviderId}
+                        appId={activeApp}
+                        isLoading={isLoading}
+                        isProxyRunning={isProxyRunning}
+                        isProxyTakeover={
+                          isProxyRunning && isCurrentAppTakeoverActive
+                        }
+                        activeProviderId={activeProviderId}
+                        onSwitch={switchProvider}
+                        onEdit={(provider) => {
+                          setEditingProvider(provider);
+                        }}
+                        onDelete={(provider) =>
+                          setConfirmAction({ provider, action: "delete" })
+                        }
+                        onRemoveFromConfig={
+                          activeApp === "opencode" ||
+                          activeApp === "openclaw" ||
+                          activeApp === "hermes"
+                            ? (provider) =>
+                                setConfirmAction({ provider, action: "remove" })
                             : undefined
-                      }
-                    />
+                        }
+                        onDisableOmo={
+                          activeApp === "opencode"
+                            ? handleDisableOmo
+                            : undefined
+                        }
+                        onDisableOmoSlim={
+                          activeApp === "opencode"
+                            ? handleDisableOmoSlim
+                            : undefined
+                        }
+                        onDuplicate={handleDuplicateProvider}
+                        onConfigureUsage={setUsageProvider}
+                        onOpenWebsite={handleOpenWebsite}
+                        onOpenTerminal={
+                          activeApp === "claude"
+                            ? handleOpenTerminal
+                            : undefined
+                        }
+                        onCreate={() => setIsAddOpen(true)}
+                        onSetAsDefault={
+                          activeApp === "openclaw"
+                            ? setAsDefaultModel
+                            : activeApp === "hermes"
+                              ? switchProvider
+                              : undefined
+                        }
+                      />
+                    )}
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -1159,19 +1186,16 @@ function App() {
             ) : (
               <div className="flex items-center gap-2">
                 <div className="relative inline-flex items-center">
-                  <a
-                    href="https://ccswitch.io"
-                    target="_blank"
-                    rel="noreferrer"
+                  <span
                     className={cn(
                       "text-xl font-semibold transition-colors",
                       isProxyRunning && isCurrentAppTakeoverActive
-                        ? "text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300"
-                        : "text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300",
+                        ? "text-emerald-500 dark:text-emerald-400"
+                        : "text-blue-500 dark:text-blue-400",
                     )}
                   >
-                    CC Switch
-                  </a>
+                    Lepro
+                  </span>
                 </div>
                 <Button
                   variant="ghost"
@@ -1191,6 +1215,8 @@ function App() {
                     setCurrentView("settings");
                   }}
                 />
+                <LeproLoginButton />
+                <LeproSyncStatus />
                 {isCurrentAppTakeoverActive && (
                   <Button
                     variant="ghost"

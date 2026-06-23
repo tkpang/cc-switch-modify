@@ -29,9 +29,17 @@ pnpm install                     # 首次
 pnpm build:renderer              # 前端 vite → dist
 cd src-tauri && cargo build      # 验证 Rust/Tauri 编译（debug）
 # 或一步出安装包：
-pnpm tauri build                 # 前端 + Rust + 打包 .msi/.exe
+pnpm tauri build                 # 前端 + Rust + 打包 NSIS .exe
 ```
 SSH 无界面会话**能编译/出安装包**，但不能可视化跑 GUI（`tauri dev` 需桌面）；GUI 手测在真实桌面跑安装包。
+
+## 打包目标 / 已知坑（2026-06-23）
+
+- **打包目标 = NSIS（`.exe`）**：`tauri.conf.json` 的 `bundle.targets` 设为 `["nsis"]`。产物：`src-tauri/target/release/bundle/nsis/Lepro Connect_<ver>_x64-setup.exe`。
+- **MSI 暂不出**：用 `targets:"all"` 时 WiX 的 `light.exe` 在本构建机失败（candle 通过、light 失败，疑缺 .NET Framework 3.5 或自定义 `wix/per-user-main.wxs` 的 ICE 校验）。需要 .msi 时再单独修 WiX/.NET，故默认只出 NSIS。
+- **pnpm 预检坑**：pnpm（v10+）跑脚本前的 `verify-deps-before-run` 会触发 `pnpm install`，遇 `ERR_PNPM_IGNORED_BUILDS`(esbuild/msw 构建脚本未批准)直接退 1。构建脚本里设 `set PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false` 跳过该预检（node_modules 已装好,无需再 install）。
+- **构建脚本用 ASCII**：`.cmd`/`.ps1` 里含中文注释经 GBK 控制台/PowerShell(无 BOM 当 GBK 解)会乱码、解析失败,构建/验证脚本一律纯 ASCII。
+- **WebView2Loader.dll 必须随包(GNU 关键坑)**：MSVC 版静态链接 WebView2 loader,**GNU 版是动态依赖 `WebView2Loader.dll`**(`objdump -p cc-switch.exe` 可见它是唯一非系统/CRT 导入)。Tauri NSIS 默认不把它打进安装包 → 装到干净机器上启动即弹「`cc-switch.exe` 系统错误:找不到 `WebView2Loader.dll`」,窗口创建失败(进程在但无窗口)。修复:`tauri.conf.json` 加 `bundle.resources: { "target/release/WebView2Loader.dll": "WebView2Loader.dll" }`,把它装到 exe 同目录。该路径在 `tauri build` 编译后、打包前已存在,故可被解析。
 
 ## 慢网中转（GitHub/大文件下载慢时）
 

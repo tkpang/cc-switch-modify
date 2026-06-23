@@ -35,9 +35,13 @@ pub struct TokenSet {
 /// - `state`: The opaque state value for CSRF protection.
 ///
 /// Returns the full authorization URL as a `String`.
-pub fn build_authorize_url(issuer: &str, redirect_uri: &str, challenge: &str, state: &str) -> String {
-    let mut url = Url::parse(&format!("{}/authorize", issuer))
-        .expect("issuer must be a valid URL");
+pub fn build_authorize_url(
+    issuer: &str,
+    redirect_uri: &str,
+    challenge: &str,
+    state: &str,
+) -> String {
+    let mut url = Url::parse(&format!("{}/authorize", issuer)).expect("issuer must be a valid URL");
 
     url.query_pairs_mut()
         .append_pair("response_type", "code")
@@ -131,7 +135,10 @@ mod tests {
         assert!(u.contains("client_id=lepro-connect"));
         assert!(u.contains("code_challenge=CH"));
         assert!(u.contains("code_challenge_method=S256"));
-        assert!(u.contains("scope=openid+offline_access") || u.contains("scope=openid%20offline_access"));
+        assert!(
+            u.contains("scope=openid+offline_access")
+                || u.contains("scope=openid%20offline_access")
+        );
         assert!(u.contains("redirect_uri=http%3A%2F%2F127.0.0.1%3A5%2Fcb"));
     }
 
@@ -140,10 +147,12 @@ mod tests {
         let server = wiremock::MockServer::start().await;
         wiremock::Mock::given(wiremock::matchers::method("POST"))
             .and(wiremock::matchers::path("/sso/token"))
-            .respond_with(wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                "access_token":"at","refresh_token":"rt","token_type":"Bearer",
-                "expires_in":3600,"scope":"openid offline_access"
-            })))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "access_token":"at","refresh_token":"rt","token_type":"Bearer",
+                    "expires_in":3600,"scope":"openid offline_access"
+                })),
+            )
             .mount(&server)
             .await;
         let http = reqwest::Client::new();
@@ -165,15 +174,21 @@ mod tests {
         let server = wiremock::MockServer::start().await;
         wiremock::Mock::given(wiremock::matchers::method("POST"))
             .and(wiremock::matchers::path("/sso/token"))
-            .and(wiremock::matchers::body_string_contains("grant_type=refresh_token"))
-            .respond_with(wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                "access_token":"at2","refresh_token":"rt2","token_type":"Bearer",
-                "expires_in":3600,"scope":"openid offline_access"
-            })))
+            .and(wiremock::matchers::body_string_contains(
+                "grant_type=refresh_token",
+            ))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "access_token":"at2","refresh_token":"rt2","token_type":"Bearer",
+                    "expires_in":3600,"scope":"openid offline_access"
+                })),
+            )
             .mount(&server)
             .await;
         let http = reqwest::Client::new();
-        let ts = refresh(&http, &format!("{}/sso", server.uri()), "old-rt").await.unwrap();
+        let ts = refresh(&http, &format!("{}/sso", server.uri()), "old-rt")
+            .await
+            .unwrap();
         assert_eq!(ts.access_token, "at2");
         assert_eq!(ts.refresh_token.as_deref(), Some("rt2"));
     }

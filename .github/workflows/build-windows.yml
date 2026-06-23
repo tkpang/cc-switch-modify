@@ -1,0 +1,37 @@
+name: build-windows
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Tauri build (NSIS)
+        env:
+          PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false"
+        run: pnpm exec tauri build --bundles nsis
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lepro-connect-setup
+          path: src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error

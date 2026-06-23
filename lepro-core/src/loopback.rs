@@ -4,19 +4,10 @@
 //! (`http://127.0.0.1:{port}/cb`)，等待单次 `GET /cb?code=...&state=...`，
 //! 返回 [`crate::oidc::Callback`]（含 code + state）后立即关停服务器。
 
-use axum::{
-    Router,
-    extract::Query,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-};
+use axum::{extract::Query, http::StatusCode, response::IntoResponse, routing::get, Router};
 use serde::Deserialize;
 use std::sync::Arc;
-use tokio::{
-    net::TcpListener,
-    sync::oneshot,
-};
+use tokio::{net::TcpListener, sync::oneshot};
 
 use crate::error::LeproError;
 use crate::oidc::Callback;
@@ -43,9 +34,10 @@ impl LoopbackHandle {
     /// 等待浏览器回调并返回 [`Callback`]（含 `code` 与 `state`）。
     /// 此方法消费 `self`，调用后服务器停止。
     pub async fn wait(self) -> Result<Callback, LeproError> {
-        let cb = self.cb_rx.await.map_err(|_| {
-            LeproError::Oidc("loopback: 服务器在收到 code 前已关闭".to_string())
-        })?;
+        let cb = self
+            .cb_rx
+            .await
+            .map_err(|_| LeproError::Oidc("loopback: 服务器在收到 code 前已关闭".to_string()))?;
         // 服务器发送 callback 后会通过 graceful shutdown 自行退出，这里 abort 是安全的双保险。
         self.server_task.abort();
         Ok(cb)
@@ -91,7 +83,10 @@ pub async fn listen_once() -> Result<LoopbackHandle, LeproError> {
                     // 仅第一次请求生效（take 保证幂等）。
                     let mut cb_guard = cb_tx.lock().await;
                     if let Some(tx) = cb_guard.take() {
-                        let _ = tx.send(Callback { code: params.code, state: params.state });
+                        let _ = tx.send(Callback {
+                            code: params.code,
+                            state: params.state,
+                        });
                     }
                     let mut shutdown_guard = shutdown_tx.lock().await;
                     if let Some(tx) = shutdown_guard.take() {
@@ -104,10 +99,9 @@ pub async fn listen_once() -> Result<LoopbackHandle, LeproError> {
     );
 
     let server_task = tokio::spawn(async move {
-        let serve = axum::serve(listener, router)
-            .with_graceful_shutdown(async move {
-                let _ = shutdown_rx.await;
-            });
+        let serve = axum::serve(listener, router).with_graceful_shutdown(async move {
+            let _ = shutdown_rx.await;
+        });
         // 服务器退出时忽略错误（调用方已通过 callback channel 拿到结果）。
         let _ = serve.await;
     });

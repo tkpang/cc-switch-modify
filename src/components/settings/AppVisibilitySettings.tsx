@@ -24,9 +24,7 @@ const APP_CONFIG: Array<{
   },
   { id: "codex", icon: "openai", nameKey: "apps.codex" },
   { id: "gemini", icon: "gemini", nameKey: "apps.gemini" },
-  { id: "opencode", icon: "opencode", nameKey: "apps.opencode" },
-  { id: "openclaw", icon: "openclaw", nameKey: "apps.openclaw" },
-  { id: "hermes", icon: "hermes", nameKey: "apps.hermes" },
+  // Lepro Connect 只暴露上面 4 个；opencode/openclaw/hermes 不展示。
 ];
 
 export function AppVisibilitySettings({

@@ -18,15 +18,9 @@ interface AppSwitcherProps {
   compact?: boolean;
 }
 
-const ALL_APPS: AppId[] = [
-  "claude",
-  "claude-desktop",
-  "codex",
-  "gemini",
-  "opencode",
-  "openclaw",
-  "hermes",
-];
+// Lepro Connect 只暴露这 4 个：Claude Code CLI / Claude Code App / Codex / Gemini。
+// opencode / openclaw / hermes 的代码保留以便合并 upstream，但不在首页切换器显示。
+const ALL_APPS: AppId[] = ["claude", "claude-desktop", "codex", "gemini"];
 const STORAGE_KEY = "cc-switch-last-app";
 
 export function AppSwitcher({

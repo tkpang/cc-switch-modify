@@ -3,8 +3,10 @@
 //! 模块在 Plan 2a Task 1-6 逐步填充：pkce / oidc / loopback / credentials / claude_settings / sync。
 
 pub mod claude_settings;
+pub mod codex_settings;
 pub mod credentials;
 pub mod error;
+pub mod gemini_settings;
 pub mod loopback;
 pub mod oidc;
 pub mod pkce;

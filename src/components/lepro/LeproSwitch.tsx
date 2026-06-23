@@ -1,20 +1,23 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Loader2, Settings2, Zap } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Provider } from "@/types";
+import { useProvidersQuery } from "@/lib/query";
 import {
   useLeproAuthStatus,
   useLeproLogin,
-  useLeproForceSync,
+  useLeproMaster,
 } from "@/lib/query/lepro";
 
 const LEPRO_ID = "lepro";
-const LAST_NONLEPRO_KEY = "lepro-last-nonlepro";
 
-// 档位 → settings.json env key,ON 时据此展示「档位 → 实际模型」映射。
+// 模块级守卫：父组件 motion.div 以 activeApp 为 key，切 tab 会重挂本组件；用模块级
+// 标志（而非 useRef）保证「开机刷新」每个会话只跑一次，避免每次切 tab 都触发同步。
+let didSessionRefresh = false;
+
+// 档位 → settings.json env key,ON 时据此展示「档位 → 实际模型」映射（取 Claude 应用的）。
 const TIER_ROWS: { label: string; envKey: string }[] = [
   { label: "Opus", envKey: "ANTHROPIC_DEFAULT_OPUS_MODEL" },
   { label: "Sonnet", envKey: "ANTHROPIC_DEFAULT_SONNET_MODEL" },
@@ -22,81 +25,63 @@ const TIER_ROWS: { label: string; envKey: string }[] = [
 ];
 
 interface LeproSwitchProps {
-  providers: Record<string, Provider>;
-  currentProviderId: string;
-  onSwitch: (provider: Provider) => void;
+  /** 是否展开「第三方供应商设置」（由父组件控制 ProviderList 的显示）。 */
   settingsOpen: boolean;
   onToggleSettings: () => void;
 }
 
 /**
- * 主屏的 Lepro 总开关。开 = 用 Lepro 的 API,卡片放大并展示当前档位→模型映射;
- * 关 = 回退到上次用的非 Lepro 供应商,卡片收紧并露出「设置」按钮进入完整供应商管理。
- * app 打开后若已登录且正在用 Lepro,会自动同步一次以刷新映射。
+ * 主屏的 Lepro 全局总开关。开 = 一键把 4 个应用（Claude CLI / Claude App / Codex /
+ * Gemini）全切到 Lepro 并展示模型映射；关 = 各应用回退到上次的供应商。卡片自行查询
+ * Claude 应用的状态判断开/关，状态由 cc-switch 当前供应商持久化（重启沿用；首装默认关）。
+ * 底部「第三方供应商设置」展开完整的逐应用供应商管理。
  */
 export function LeproSwitch({
-  providers,
-  currentProviderId,
-  onSwitch,
   settingsOpen,
   onToggleSettings,
 }: LeproSwitchProps) {
   const { t } = useTranslation();
+  const { data: claudeData } = useProvidersQuery("claude");
   const { data: loggedIn } = useLeproAuthStatus();
   const login = useLeproLogin();
-  const forceSync = useLeproForceSync();
+  const { enable, disable, refresh } = useLeproMaster();
 
-  const isLeproActive = currentProviderId === LEPRO_ID;
-  const hasLeproProvider = !!providers[LEPRO_ID];
-  const pending = login.isPending || forceSync.isPending;
+  const isLeproActive = claudeData?.currentProviderId === LEPRO_ID;
+  const pending =
+    login.isPending ||
+    enable.isPending ||
+    disable.isPending ||
+    refresh.isPending;
 
-  // 记住最近一次使用的非 Lepro 供应商,关 Lepro 时回退到它。
+  // 开机/打开 app：若当前已在用 Lepro，静默刷新一次（拉最新映射并对已开应用重切）。
+  // 每次启动仅一次；不会把「关」的状态改成「开」（仅当已是开才刷新）。
   useEffect(() => {
-    if (currentProviderId && currentProviderId !== LEPRO_ID) {
-      localStorage.setItem(LAST_NONLEPRO_KEY, currentProviderId);
+    if (didSessionRefresh) return;
+    if (isLeproActive) {
+      didSessionRefresh = true;
+      refresh.mutate();
     }
-  }, [currentProviderId]);
+  }, [isLeproActive, refresh]);
 
-  // app 打开后:若已登录且正在用 Lepro,自动同步一次刷新模型映射(每次启动仅一次)。
-  const didAutoSync = useRef(false);
-  useEffect(() => {
-    if (didAutoSync.current) return;
-    if (loggedIn && isLeproActive) {
-      didAutoSync.current = true;
-      forceSync.mutate();
+  const handleEnable = () => {
+    if (pending) return;
+    if (!loggedIn) {
+      // 未登录：飞书登录成功后再一键开启（这本身就是用户的手动操作）。
+      login.mutate(undefined, { onSuccess: () => enable.mutate() });
+    } else {
+      enable.mutate();
     }
-  }, [loggedIn, isLeproActive, forceSync]);
-
-  const fallbackNonLepro = (): string | null => {
-    const last = localStorage.getItem(LAST_NONLEPRO_KEY);
-    if (last && last !== LEPRO_ID && providers[last]) return last;
-    return Object.keys(providers).find((id) => id !== LEPRO_ID) ?? null;
   };
 
   const handleToggle = (checked: boolean) => {
     if (pending) return;
-    if (checked) {
-      if (!loggedIn) {
-        // 未登录:飞书登录成功后自动同步(会建 lepro provider 并切过去)。
-        login.mutate(undefined, { onSuccess: () => forceSync.mutate() });
-      } else if (hasLeproProvider) {
-        onSwitch(providers[LEPRO_ID]);
-      } else {
-        forceSync.mutate();
-      }
-    } else {
-      const target = fallbackNonLepro();
-      if (target && providers[target]) onSwitch(providers[target]);
-    }
+    if (checked) handleEnable();
+    else disable.mutate();
   };
 
-  const activeName = providers[currentProviderId]?.name ?? currentProviderId;
-
-  // 当前 Lepro provider 写入 settings.json 的 env(含档位→模型映射)。
-  const leproEnv = (providers[LEPRO_ID]?.settingsConfig?.env ?? {}) as Record<
-    string,
-    unknown
-  >;
+  // 当前 Lepro provider（Claude 应用）写入的 env：档位 → 实际模型映射。
+  const leproEnv = (claudeData?.providers?.[LEPRO_ID]?.settingsConfig?.env ??
+    {}) as Record<string, unknown>;
   const asStr = (v: unknown) => (typeof v === "string" ? v : "");
   const mappingRows = TIER_ROWS.map((r) => ({
     label: r.label,
@@ -114,7 +99,7 @@ export function LeproSwitch({
           : "border-border bg-muted/30",
       )}
     >
-      {/* 头部:图标 + 标题/状态 + (设置) + 开关 */}
+      {/* 头部：图标 + 标题/状态 + 总开关 */}
       <div
         className={cn(
           "flex items-center justify-between gap-4",
@@ -150,47 +135,53 @@ export function LeproSwitch({
             >
               {t("lepro.switch.title", { defaultValue: "Lepro" })}
             </div>
-            <div
-              className={cn(
-                "truncate text-muted-foreground",
-                isLeproActive ? "text-sm mt-0.5" : "text-sm",
-              )}
-            >
+            <div className="mt-0.5 truncate text-sm text-muted-foreground">
               {isLeproActive
-                ? t("lepro.switch.onHint", {
-                    defaultValue: "Claude Code 正在使用 Lepro API",
+                ? t("lepro.switch.onHintAll", {
+                    defaultValue:
+                      "Claude Code / Claude App / Codex / Gemini 都在使用 Lepro",
                   })
-                : t("lepro.switch.offHint", {
-                    name: activeName,
-                    defaultValue: `已关闭 · 当前供应商：${activeName}`,
+                : t("lepro.switch.offHintAll", {
+                    defaultValue: "已关闭 · 各应用使用原供应商",
                   })}
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {!isLeproActive && (
-            <Button
-              variant={settingsOpen ? "secondary" : "outline"}
-              size="sm"
-              onClick={onToggleSettings}
-              className="gap-1.5"
-            >
-              <Settings2 className="h-4 w-4" />
-              {t("lepro.switch.settings", { defaultValue: "设置" })}
-            </Button>
-          )}
-          <Switch
-            checked={isLeproActive}
-            onCheckedChange={handleToggle}
-            disabled={pending}
-            aria-label={t("lepro.switch.title", { defaultValue: "Lepro" })}
-          />
-        </div>
+        <Switch
+          checked={!!isLeproActive}
+          onCheckedChange={handleToggle}
+          disabled={pending}
+          aria-label={t("lepro.switch.title", { defaultValue: "Lepro" })}
+        />
       </div>
 
-      {/* ON 时展示当前档位→模型映射,方便确认 Claude Code 实际路由到哪个模型 */}
+      {/* 关闭时：一键开启（把所有应用切到 Lepro）的醒目入口 */}
+      {!isLeproActive && (
+        <div className="px-5 pb-5">
+          <Button
+            onClick={handleEnable}
+            disabled={pending}
+            className="w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+          >
+            {pending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4" />
+            )}
+            {loggedIn
+              ? t("lepro.switch.enableAll", {
+                  defaultValue: "一键开启 · 全部应用切到 Lepro",
+                })
+              : t("lepro.switch.loginEnable", {
+                  defaultValue: "飞书登录并开启 Lepro",
+                })}
+          </Button>
+        </div>
+      )}
+
+      {/* 开启时：展示当前档位 → 模型映射 */}
       {showMapping && (
-        <div className="border-t border-emerald-200/70 px-6 pb-5 pt-4 dark:border-emerald-900/50">
+        <div className="border-t border-emerald-200/70 px-6 pb-4 pt-4 dark:border-emerald-900/50">
           <div className="mb-3 text-xs font-medium uppercase tracking-wide text-emerald-700/80 dark:text-emerald-400/80">
             {t("lepro.switch.mappingTitle", { defaultValue: "当前模型映射" })}
           </div>
@@ -217,9 +208,35 @@ export function LeproSwitch({
                 </code>
               </div>
             )}
+            <div className="mt-1 text-xs text-muted-foreground">
+              {t("lepro.switch.codexGeminiNote", {
+                defaultValue:
+                  "Codex / Gemini 默认用 gpt-5.5（工具内可切中转站其它模型）",
+              })}
+            </div>
           </div>
         </div>
       )}
+
+      {/* 底部：第三方供应商设置（展开逐应用供应商管理） */}
+      <div
+        className={cn(
+          "flex justify-end border-t px-5 py-3",
+          isLeproActive
+            ? "border-emerald-200/70 dark:border-emerald-900/50"
+            : "border-border/60",
+        )}
+      >
+        <Button
+          variant={settingsOpen ? "secondary" : "ghost"}
+          size="sm"
+          onClick={onToggleSettings}
+          className="gap-1.5 text-muted-foreground"
+        >
+          <Settings2 className="h-4 w-4" />
+          {t("lepro.switch.thirdParty", { defaultValue: "第三方供应商设置" })}
+        </Button>
+      </div>
     </div>
   );
 }

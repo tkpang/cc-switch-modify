@@ -29,13 +29,13 @@ pub async fn fetch_creds(http: &reqwest::Client) -> Result<credentials::Credenti
     credentials::fetch(http, PORTAL_BASE, &token).await
 }
 
-/// 同步：把凭据写成 "Lepro" provider 并切换为当前（覆盖 `~/.claude/settings.json`）。
-/// 必须在**非 async-runtime 线程**调用（ProviderService 内部 block_on）。
-pub fn write_lepro_provider(
+/// 在指定 app 下新建/更新 "Lepro" provider（不切换）。切换交给前端总开关
+/// （前端持有各 app 当前供应商,负责记忆「上次非 Lepro」以便关闭时回退）。
+fn upsert_lepro_provider(
     state: &AppState,
-    creds: &credentials::Credentials,
+    app: AppType,
+    settings: serde_json::Value,
 ) -> Result<(), LeproError> {
-    let settings = core_sync::to_provider_settings(creds, None);
     let provider = Provider::with_id(
         LEPRO_PROVIDER_ID.to_string(),
         "Lepro".to_string(),
@@ -43,12 +43,34 @@ pub fn write_lepro_provider(
         None,
     );
     // 新建；若已存在则改为更新（兼容 save 非 upsert 的实现）。
-    if ProviderService::add(state, AppType::Claude, provider.clone(), false).is_err() {
-        ProviderService::update(state, AppType::Claude, Some(LEPRO_PROVIDER_ID), provider)
+    if ProviderService::add(state, app, provider.clone(), false).is_err() {
+        ProviderService::update(state, app, Some(LEPRO_PROVIDER_ID), provider)
             .map_err(|e| LeproError::Io(e.to_string()))?;
     }
-    // 切换为当前 → 写入 ~/.claude/settings.json。
-    ProviderService::switch(state, AppType::Claude, LEPRO_PROVIDER_ID)
-        .map_err(|e| LeproError::Io(e.to_string()))?;
+    Ok(())
+}
+
+/// 同步：为 **全部 4 个 app**（Claude CLI / Claude App / Codex / Gemini）写入/更新
+/// "Lepro" provider（各自对应格式）。**不切换** —— 由前端总开关决定开/关。
+/// 必须在**非 async-runtime 线程**调用（ProviderService 内部 block_on）。
+pub fn write_lepro_provider(
+    state: &AppState,
+    creds: &credentials::Credentials,
+) -> Result<(), LeproError> {
+    // Claude CLI 与 Claude App 共用同一套 env(ANTHROPIC_*);切换时 ClaudeDesktop
+    // 由 ProviderService 内部转成 3P profile 写入。
+    let claude = core_sync::to_provider_settings(creds, None);
+    upsert_lepro_provider(state, AppType::Claude, claude.clone())?;
+    upsert_lepro_provider(state, AppType::ClaudeDesktop, claude)?;
+    upsert_lepro_provider(
+        state,
+        AppType::Codex,
+        core_sync::to_codex_provider_settings(creds),
+    )?;
+    upsert_lepro_provider(
+        state,
+        AppType::Gemini,
+        core_sync::to_gemini_provider_settings(creds),
+    )?;
     Ok(())
 }

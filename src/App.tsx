@@ -957,16 +957,11 @@ function App() {
                     transition={{ duration: 0.15 }}
                     className="space-y-4"
                   >
-                    {activeApp === "claude" && (
-                      <LeproSwitch
-                        providers={providers}
-                        currentProviderId={currentProviderId}
-                        onSwitch={switchProvider}
-                        settingsOpen={leproSettingsOpen}
-                        onToggleSettings={() => setLeproSettingsOpen((s) => !s)}
-                      />
-                    )}
-                    {(activeApp !== "claude" || leproSettingsOpen) && (
+                    <LeproSwitch
+                      settingsOpen={leproSettingsOpen}
+                      onToggleSettings={() => setLeproSettingsOpen((s) => !s)}
+                    />
+                    {leproSettingsOpen && (
                       <ProviderList
                         providers={providers}
                         currentProviderId={currentProviderId}

@@ -43,6 +43,27 @@ pub fn to_provider_settings(creds: &Credentials, existing: Option<Value>) -> Val
     )
 }
 
+/// Map credentials to a Codex provider `settings_config`（`{ auth, config }`）。
+///
+/// Codex 无 Opus/Sonnet/Haiku 档位,只用单个默认模型;中转站按模型名路由,故
+/// 用户在 Codex 内 `/model` 仍可切到中转站其它模型。
+pub fn to_codex_provider_settings(creds: &Credentials) -> Value {
+    crate::codex_settings::build(
+        &creds.base_url,
+        &creds.token,
+        crate::codex_settings::DEFAULT_CODEX_MODEL,
+    )
+}
+
+/// Map credentials to a Gemini provider `settings_config`（`{ env: {...} }`）。
+pub fn to_gemini_provider_settings(creds: &Credentials) -> Value {
+    crate::gemini_settings::build(
+        &creds.base_url,
+        &creds.token,
+        crate::gemini_settings::DEFAULT_GEMINI_MODEL,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
